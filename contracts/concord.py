@@ -779,10 +779,9 @@ class Concord(gl.Contract):
         left_rule.relation_ids.append(relation_id)
         right_rule.relation_ids.append(relation_id)
         book.relation_ids.append(relation_id)
-        # Keep the event positional-only.  StudioNet's current event encoder
-        # rejects the dynamic keyword blob on this path even though the
-        # relation itself is valid and fully persisted in storage.
-        RelationRecorded(relation_id, left_rule.rule_id, right_rule.rule_id, relation.kind).emit()
+        # Relation storage is authoritative.  StudioNet's current runtime
+        # rejects this event type on the graph-edge path, so do not let a
+        # non-authoritative notification make a valid consensus write fail.
         return relation_id
 
     @gl.public.write
