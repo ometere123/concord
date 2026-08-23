@@ -250,7 +250,7 @@ python -m pip install -r requirements-dev.txt
 gltest tests/test_concord.py -v -s
 ```
 
-`tests/test_concord.py` contains 22 scenarios covering lifecycle, conflicts, deterministic precedence, blocked-rule recovery, supersession/restoration, canon pinning, and malicious leader/relationship rejection.
+`tests/test_concord.py` contains 26 Direct Mode scenarios covering lifecycle, conflicts, deterministic precedence, blocked-rule graph enrichment, supersession/restoration, canon pinning, prompt-injection boundaries, and malicious leader/relationship rejection.
 
 ## Deployment
 

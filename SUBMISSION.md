@@ -76,7 +76,7 @@ The repository includes `IConcord` as a typed contract interface.
 
 The repository contains:
 
-- 22 GenLayer Direct Mode tests;
+- 26 GenLayer Direct Mode tests;
 - malicious-leader normalization rejection;
 - malicious relation rejection;
 - deterministic priority and canon tests;

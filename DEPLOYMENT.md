@@ -2,7 +2,10 @@
 
 ## Current repository status
 
-The source, tests, documentation, and offline preflight are complete.
+The source, tests, documentation, and offline preflight are complete. The
+repository has no claimed live deployment: an address and transaction hash are
+intentionally omitted until a real CLI account can deploy and finalize the
+exact source commit.
 
 A live address must only be recorded after a deployment has actually finalized. Do not fabricate an address or transaction hash.
 
