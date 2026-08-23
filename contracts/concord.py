@@ -779,7 +779,10 @@ class Concord(gl.Contract):
         left_rule.relation_ids.append(relation_id)
         right_rule.relation_ids.append(relation_id)
         book.relation_ids.append(relation_id)
-        RelationRecorded(relation_id, left_rule.rule_id, right_rule.rule_id, relation.kind, resolution=int(relation.resolution)).emit()
+        # Keep the event positional-only.  StudioNet's current event encoder
+        # rejects the dynamic keyword blob on this path even though the
+        # relation itself is valid and fully persisted in storage.
+        RelationRecorded(relation_id, left_rule.rule_id, right_rule.rule_id, relation.kind).emit()
         return relation_id
 
     @gl.public.write
