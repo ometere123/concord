@@ -1,0 +1,415 @@
+PURPOSE = """
+Rules governing treasury withdrawals, emergency authority, approvals, and
+execution constraints for a protocol treasury.
+""".strip()
+
+
+def clear_require_semantics():
+    return {
+        "atomic": True,
+        "modality": "REQUIRE",
+        "actor": "treasury operator",
+        "action": "obtain approvals",
+        "object": "withdrawal",
+        "condition": "withdrawal exceeds $10,000",
+        "exception": "",
+        "scope": "protocol treasury",
+        "ambiguity": "CLEAR",
+        "ambiguity_reason": "",
+    }
+
+
+def clear_prohibit_semantics():
+    return {
+        "atomic": True,
+        "modality": "PROHIBIT",
+        "actor": "treasury operator",
+        "action": "execute withdrawal",
+        "object": "protocol treasury funds",
+        "condition": "fewer than three approvals are present",
+        "exception": "",
+        "scope": "protocol treasury",
+        "ambiguity": "CLEAR",
+        "ambiguity_reason": "",
+    }
+
+
+def clear_permit_semantics():
+    return {
+        "atomic": True,
+        "modality": "PERMIT",
+        "actor": "security council",
+        "action": "execute withdrawal",
+        "object": "protocol treasury funds",
+        "condition": "active exploit emergency and fewer than three approvals are present",
+        "exception": "",
+        "scope": "protocol treasury",
+        "ambiguity": "CLEAR",
+        "ambiguity_reason": "",
+    }
+
+
+def ambiguous_semantics():
+    return {
+        "atomic": False,
+        "modality": "REQUIRE",
+        "actor": "security council",
+        "action": "act",
+        "object": "",
+        "condition": "",
+        "exception": "",
+        "scope": "protocol treasury",
+        "ambiguity": "AMBIGUOUS",
+        "ambiguity_reason": "multiple independent norms",
+    }
+
+
+def relation(kind, conflict_type="NONE", reason="RELATION", overlap="protocol treasury"):
+    return {
+        "relation": kind,
+        "conflict_type": conflict_type,
+        "overlap": overlap,
+        "reason_code": reason,
+    }
+
+
+def deploy_book(direct_deploy):
+    contract = direct_deploy("contracts/concord.py")
+    book_id = contract.create_rulebook("Treasury Constitution", PURPOSE, True)
+    return contract, book_id
+
+
+def propose_first(direct_vm, contract, book_id, semantics=None, priority=100):
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", semantics or clear_prohibit_semantics())
+    return contract.propose_rule(
+        book_id,
+        "A treasury withdrawal must not execute when fewer than three approvals are present.",
+        priority,
+        0,
+    )
+
+
+def test_create_rulebook(direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    book = contract.get_rulebook(book_id)
+    assert book["name"] == "Treasury Constitution"
+    assert book["strict_mode"] is True
+    assert book["canon_version"] == 0
+    assert book["consistent"] is True
+    assert len(book["canon_hash"]) == 64
+
+
+def test_only_owner_can_modify_canon(direct_vm, direct_deploy, direct_alice):
+    contract, book_id = deploy_book(direct_deploy)
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_prohibit_semantics())
+    with direct_vm.prank(direct_alice):
+        with direct_vm.expect_revert("only the rulebook owner may modify canon"):
+            contract.propose_rule(book_id, "Withdrawals without three approvals are prohibited.", 100, 0)
+
+
+def test_clear_first_rule_becomes_active(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    rule_id = propose_first(direct_vm, contract, book_id)
+    rule = contract.get_rule(rule_id)
+    book = contract.get_rulebook(book_id)
+    assert rule["status_name"] == "ACTIVE"
+    assert rule["semantic_state_name"] == "CLEAR"
+    assert rule["modality_name"] == "PROHIBIT"
+    assert book["active_count"] == 1
+    assert book["blocked_count"] == 0
+    assert book["canon_version"] == 1
+    assert book["consistent"] is True
+
+
+def test_non_atomic_rule_is_blocked(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", ambiguous_semantics())
+    rule_id = contract.propose_rule(
+        book_id,
+        "The council may act in emergencies and must publish a report within a day.",
+        100,
+        0,
+    )
+    rule = contract.get_rule(rule_id)
+    assert rule["status_name"] == "BLOCKED"
+    assert contract.blocking_reason(rule_id) == "SEMANTIC_AMBIGUITY"
+    assert contract.get_rulebook(book_id)["canon_version"] == 0
+
+
+def test_compatible_rule_extends_canon(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_require_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("COMPATIBLE", reason="JOINTLY_SATISFIABLE"))
+    second = contract.propose_rule(
+        book_id,
+        "Withdrawals above $10,000 require three approvals before execution.",
+        100,
+        0,
+    )
+    assert contract.get_rule(second)["status_name"] == "ACTIVE"
+    edge = contract.relation_between(first, second)
+    assert edge["exists"] is True
+    assert edge["kind_name"] == "COMPATIBLE"
+    assert edge["resolution_name"] == "NONE"
+    assert contract.get_rulebook(book_id)["active_count"] == 2
+
+
+def test_equal_priority_conflict_is_blocked_in_strict_mode(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id, priority=100)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(
+        r"CONCORD / CLASSIFY RULE RELATION",
+        relation("CONFLICT", "MODAL", "PERMISSION_PROHIBITION_CLASH", "emergency withdrawal with fewer than three approvals"),
+    )
+    second = contract.propose_rule(
+        book_id,
+        "During an active exploit the security council may execute a withdrawal without three approvals.",
+        100,
+        0,
+    )
+    assert contract.get_rule(second)["status_name"] == "BLOCKED"
+    assert contract.blocking_reason(second) == "UNRESOLVED_CONFLICT"
+    edge = contract.relation_between(first, second)
+    assert edge["kind_name"] == "CONFLICT"
+    assert edge["resolution_name"] == "UNRESOLVED"
+    assert contract.get_rulebook(book_id)["active_count"] == 1
+
+
+def test_priority_resolves_conflict_deterministically(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id, priority=100)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("CONFLICT", "MODAL"))
+    second = contract.propose_rule(
+        book_id,
+        "During an active exploit the security council may execute a withdrawal without three approvals.",
+        200,
+        0,
+    )
+    assert contract.get_rule(second)["status_name"] == "ACTIVE"
+    edge = contract.relation_between(first, second)
+    assert edge["resolution_name"] == "RIGHT_PREVAILS"
+    assert contract.is_consistent(book_id) is True
+
+
+def test_blocked_rule_can_change_priority_then_activate(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id, priority=100)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("CONFLICT", "MODAL"))
+    second = contract.propose_rule(
+        book_id,
+        "During an active exploit the security council may execute a withdrawal without three approvals.",
+        100,
+        0,
+    )
+    contract.set_blocked_rule_priority(second, 200)
+    assert contract.relation_between(first, second)["resolution_name"] == "RIGHT_PREVAILS"
+    contract.activate_blocked_rule(second)
+    assert contract.get_rule(second)["status_name"] == "ACTIVE"
+    assert contract.get_rulebook(book_id)["canon_version"] == 2
+
+
+def test_priority_of_active_rule_is_immutable(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    rule_id = propose_first(direct_vm, contract, book_id)
+    with direct_vm.expect_revert("priority can change only while blocked"):
+        contract.set_blocked_rule_priority(rule_id, 200)
+
+
+def test_supersession_is_atomic_and_preserves_lineage(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id, priority=100)
+    direct_vm.clear_mocks()
+    replacement_semantics = clear_prohibit_semantics()
+    replacement_semantics["condition"] = "fewer than four approvals are present"
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", replacement_semantics)
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("SPECIALIZES", reason="THRESHOLD_AMENDMENT"))
+    second = contract.propose_rule(
+        book_id,
+        "A treasury withdrawal must not execute when fewer than four approvals are present.",
+        100,
+        first,
+    )
+    assert contract.get_rule(first)["status_name"] == "SUPERSEDED"
+    assert contract.get_rule(first)["superseded_by_rule_id"] == second
+    assert contract.get_rule(second)["status_name"] == "ACTIVE"
+    assert contract.get_rule(second)["supersedes_rule_id"] == first
+    assert contract.get_rulebook(book_id)["active_count"] == 1
+
+
+def test_unrelated_declared_supersession_is_blocked(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_require_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("UNRELATED", reason="NO_SHARED_NORM"))
+    second = contract.propose_rule(
+        book_id,
+        "Security reports must be published within seven days.",
+        100,
+        first,
+    )
+    assert contract.get_rule(second)["status_name"] == "BLOCKED"
+    assert contract.blocking_reason(second) == "INVALID_SUPERSESSION_RELATION"
+    assert contract.get_rule(first)["status_name"] == "ACTIVE"
+
+
+def test_repeal_changes_canon_hash_and_version(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    rule_id = propose_first(direct_vm, contract, book_id)
+    before = contract.get_rulebook(book_id)
+    contract.repeal_rule(rule_id)
+    after = contract.get_rulebook(book_id)
+    assert contract.get_rule(rule_id)["status_name"] == "REPEALED"
+    assert after["canon_version"] == before["canon_version"] + 1
+    assert after["canon_hash"] != before["canon_hash"]
+    assert after["active_count"] == 0
+
+
+def test_consumer_can_pin_exact_consistent_canon(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    propose_first(direct_vm, contract, book_id)
+    digest = contract.current_canon_hash(book_id)
+    assert contract.is_consistent_for(book_id, digest) is True
+    assert contract.is_consistent_for(book_id, "0" * 64) is False
+
+
+def test_permissive_book_can_expose_unresolved_canon(direct_vm, direct_deploy):
+    contract = direct_deploy("contracts/concord.py")
+    book_id = contract.create_rulebook("Research Rules", PURPOSE, False)
+    first = propose_first(direct_vm, contract, book_id, priority=100)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("CONFLICT", "MODAL"))
+    second = contract.propose_rule(
+        book_id,
+        "During an active exploit the security council may execute a withdrawal without three approvals.",
+        100,
+        0,
+    )
+    assert contract.get_rule(second)["status_name"] == "ACTIVE"
+    book = contract.get_rulebook(book_id)
+    assert book["active_count"] == 2
+    assert book["unresolved_conflicts"] == 1
+    assert book["consistent"] is False
+    assert contract.relation_between(first, second)["resolution_name"] == "UNRESOLVED"
+
+
+def test_canon_view_excludes_blocked_rules(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", ambiguous_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("AMBIGUOUS", reason="UNCLEAR_OVERLAP"))
+    second = contract.propose_rule(book_id, "The council should do what is necessary and report later.", 100, 0)
+    canon = contract.get_canon(book_id)
+    assert [item["rule_id"] for item in canon] == [first]
+    assert contract.get_rule(second)["status_name"] == "BLOCKED"
+
+
+def test_relation_is_pinned_to_semantic_hashes(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_require_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("COMPATIBLE"))
+    second = contract.propose_rule(book_id, "Withdrawals above $10,000 require three approvals.", 100, 0)
+    edge = contract.relation_between(first, second)
+    assert edge["left_semantic_hash"] == contract.get_rule(first)["semantic_hash"]
+    assert edge["right_semantic_hash"] == contract.get_rule(second)["semantic_hash"]
+
+
+def test_validator_can_reject_unfaithful_normalization(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    bad = clear_prohibit_semantics()
+    bad["modality"] = "PERMIT"
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", bad)
+    contract.propose_rule(
+        book_id,
+        "A treasury withdrawal must not execute when fewer than three approvals are present.",
+        100,
+        0,
+    )
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / VERIFY NORMALIZATION", {"valid": False, "reason_code": "WRONG_MODALITY"})
+    assert direct_vm.run_validator() is False
+
+
+def test_validator_accepts_faithful_normalization(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_prohibit_semantics())
+    contract.propose_rule(
+        book_id,
+        "A treasury withdrawal must not execute when fewer than three approvals are present.",
+        100,
+        0,
+    )
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / VERIFY NORMALIZATION", {"valid": True, "reason_code": "FAITHFUL"})
+    assert direct_vm.run_validator() is True
+
+
+def test_rejects_invalid_priority(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    with direct_vm.expect_revert("priority must be 0..1000"):
+        contract.propose_rule(book_id, "A rule.", 1001, 0)
+
+
+def test_unknown_relation_returns_exists_false(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", ambiguous_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("AMBIGUOUS", reason="UNCLEAR_OVERLAP"))
+    second = contract.propose_rule(book_id, "Something ambiguous.", 100, 0)
+    assert contract.relation_between(first, first)["exists"] is False
+    assert contract.get_rule(second)["rulebook_id"] == book_id
+
+
+def test_validator_can_reject_wrong_relation(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("COMPATIBLE", reason="FALSE_COMPATIBILITY"))
+    contract.propose_rule(
+        book_id,
+        "During an active exploit the security council may execute a withdrawal without three approvals.",
+        100,
+        0,
+    )
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / VERIFY NORMALIZATION", {"valid": True, "reason_code": "FAITHFUL"})
+    direct_vm.mock_llm(r"CONCORD / VERIFY RELATION", {"valid": False, "reason_code": "MISSED_CONFLICT"})
+    assert direct_vm.run_validator() is False
+
+
+def test_superseded_rule_can_be_restored_after_replacement_repeal(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    first = propose_first(direct_vm, contract, book_id, priority=100)
+    direct_vm.clear_mocks()
+    replacement_semantics = clear_prohibit_semantics()
+    replacement_semantics["condition"] = "fewer than four approvals are present"
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", replacement_semantics)
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE RELATION", relation("SPECIALIZES", reason="THRESHOLD_AMENDMENT"))
+    replacement = contract.propose_rule(
+        book_id,
+        "A treasury withdrawal must not execute when fewer than four approvals are present.",
+        100,
+        first,
+    )
+    assert contract.get_rule(first)["status_name"] == "SUPERSEDED"
+    assert contract.get_rule(replacement)["status_name"] == "ACTIVE"
+    contract.repeal_rule(replacement)
+    contract.restore_superseded_rule(first)
+    assert contract.get_rule(first)["status_name"] == "ACTIVE"
+    assert contract.get_rule(first)["superseded_by_rule_id"] == 0
+    assert contract.get_rule(replacement)["status_name"] == "REPEALED"
+    assert contract.get_rulebook(book_id)["active_count"] == 1
