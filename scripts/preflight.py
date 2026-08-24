@@ -139,8 +139,9 @@ def _ast_checks(source: str) -> list[str]:
     checks.append("public lifecycle and consumer surface present")
     assert source.count("gl.vm.run_nondet_unsafe") == 2
     checks.append("exactly two explicit custom consensus boundaries")
-    assert "CONCORD / VERIFY NORMALIZATION" in source
-    assert "CONCORD / VERIFY RELATION" in source
+    assert "CONCORD / INDEPENDENTLY NORMALIZE RULE" in source
+    assert "CONCORD / COMPARE INDEPENDENT NORMALIZATIONS" in source
+    assert "CONCORD / INDEPENDENTLY CLASSIFY RULE RELATION" in source
     checks.append("validator prompts independently verify leader semantics and relations")
     assert "Priority is NOT part of this semantic judgement" in source
     checks.append("semantic conflict detection separated from deterministic precedence")
