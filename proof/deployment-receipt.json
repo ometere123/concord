@@ -1,0 +1,13 @@
+{
+  "source_commit": "a9555db",
+  "network": "GenLayer StudioNet",
+  "cli_version": "0.39.1",
+  "deployer": "0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2",
+  "contract_address": "0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA",
+  "deployment_tx": "0xd7ecd14bf1ce45f5c966b376791681e2554ce8102ce490ff17316d960129af40",
+  "status": "FINALIZED",
+  "result": "MAJORITY_AGREE",
+  "execution_stdout": "",
+  "execution_stderr": "",
+  "notes": "Sanitized from the GenLayer CLI deployment output; validator secrets and machine credentials omitted."
+}

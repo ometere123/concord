@@ -97,6 +97,10 @@ This allows a consumer to pin exactly the rule system it depended upon.
 
 ## Complexity bound
 
-A complete pairwise graph grows quadratically. Concord therefore limits each rulebook to 24 nodes.
+A complete pairwise graph grows quadratically. Concord therefore limits each
+rulebook to 24 nodes: at most 276 unique edges and at most 23 comparisons for
+the 24th proposal. Superseded nodes remain in the bounded historical comparison
+set because they may be restored later; repealed nodes remain excluded because
+there is no repeal-restoration operation.
 
 The contract treats semantic partitioning as part of architecture: large policy systems should use multiple coherent rulebooks instead of a single unbounded graph.

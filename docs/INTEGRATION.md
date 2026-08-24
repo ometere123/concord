@@ -16,11 +16,25 @@ concord = IConcord(concord_address)
 valid = concord.view().is_consistent_for(rulebook_id, expected_canon_hash)
 ```
 
-If `valid` is false, the consumer can fail closed because either the rulebook is inconsistent or active canonical state changed since the consumer pinned it.
+If `valid` is false, the consumer can fail closed because either the rulebook is inconsistent or active canonical state changed since the consumer pinned it. For a resolved-conflict canon, also inspect `canon_status` and `get_canon_relations` before executing an action in an affected scope.
 
 ## Consumer pattern: inspect current canon
 
 `get_canon(rulebook_id)` returns active rules with normalized semantics and priority.
+
+`get_canon_relations(rulebook_id)` returns the bounded active-active graph,
+including relation kind, semantic hashes, and deterministic conflict resolution.
+Consumers must read this view when resolved conflicts are meaningful to execution.
+
+`canon_status(rulebook_id)` makes the distinction explicit:
+
+- `COHERENT`: no active conflict or ambiguity;
+- `RESOLVED_CONFLICTS`: conflicts exist, but every active conflict has deterministic precedence;
+- `UNRESOLVED`: at least one active conflict has no deterministic winner;
+- `AMBIGUOUS`: at least one active relation is semantically ambiguous.
+
+`consistent=true` means no unresolved or ambiguous active relation. It does not
+mean that no conflict edge exists.
 
 A consumer can use this as trusted shared context for a separate adjudication contract without repeating normalization work.
 

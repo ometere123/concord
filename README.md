@@ -1,6 +1,6 @@
 # Concord
 
-**A consensus-backed semantic consistency and precedence graph for natural-language rule systems on GenLayer.**
+**A consensus-backed semantic consistency and deterministic precedence layer for natural-language rule systems on GenLayer.**
 
 Concord is a standalone Intelligent Contract primitive. It does not ship a frontend and it does not require a backend. The contract itself is the source of truth.
 
@@ -21,6 +21,9 @@ Instead of repeatedly asking an LLM, "is this policy okay?", Concord maintains:
 - a typed cross-contract interface for downstream consumers.
 
 The result is not a one-shot AI verdict. It is a living, versioned rule graph whose usefulness increases as more rules are added.
+
+Current hardened StudioNet deployment: `0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA`,
+deployed from source commit `a9555db`. See the [deployment and sanitized proof records](DEPLOYMENT.md).
 
 ## Why this primitive exists
 
@@ -131,7 +134,7 @@ Blocked rules stay in history and in the graph but do not enter canonical active
 
 ### Permissive mode
 
-A permissive rulebook may admit a rule with unresolved conflict. The active canon then exposes `consistent = false` and the exact unresolved edges remain queryable.
+A permissive rulebook may admit a rule with unresolved conflict. The active canon then exposes `consistent = false` and the exact unresolved edges remain queryable. A resolved conflict is different: `consistent = true`, `has_conflicts = true`, and `canon_status = RESOLVED_CONFLICTS`.
 
 ### Blocked-rule recovery
 
@@ -139,11 +142,11 @@ A blocked rule can change **priority only**. Its text and semantic interpretatio
 
 ### Supersession, repeal, restoration
 
-Amendments are new immutable nodes. A declared replacement is semantically checked against its target before activation. Repeal never deletes history. A superseded rule can only be restored after its replacement becomes inactive and the existing graph shows it can safely re-enter canon.
+Amendments are new immutable nodes. A declared replacement is semantically checked against its target before activation. Repeal never deletes history. A superseded rule can only be restored after its replacement becomes inactive and the graph shows it can safely re-enter canon. Superseded nodes remain eligible for future pairwise comparison, so later rules cannot create a restoration-time missing edge. Restoration also checks blocked relations, preventing a known unresolved edge from being bypassed.
 
 ## Canon hash
 
-The `canon_hash` commits to active rules and active-active relation structure, including rule IDs, text hashes, semantic hashes, priorities, supersession targets, relation kinds, resolutions, and strict/permissive mode.
+The `canon_hash` commits to active rules and active-active relation structure, including rule IDs, text hashes, semantic hashes, priorities, supersession targets, relation kinds, conflict subtypes, resolutions, and strict/permissive mode.
 
 Downstream contracts can pin an exact coherent constitution:
 
@@ -174,6 +177,8 @@ Views:
 - `get_relation(relation_id)`
 - `relation_between(left_rule_id, right_rule_id)`
 - `get_canon(rulebook_id)`
+- `get_canon_relations(rulebook_id)`
+- `canon_status(rulebook_id)`
 - `blocking_reason(rule_id)`
 - `is_consistent(rulebook_id)`
 - `is_consistent_for(rulebook_id, expected_canon_hash)`
@@ -198,13 +203,13 @@ The model cannot directly mutate arbitrary state and cannot choose precedence. T
 7. persistent blocked/history nodes;
 8. supersession and repeal lineage;
 9. hashed canonical state for consumers;
-10. later rules compare against older active **and blocked** nodes.
+10. later rules compare against older active, blocked, and restorable superseded nodes.
 
 The valuable output is the accumulated graph and canonical state, not generated prose.
 
 ## Bounded cost
 
-Pairwise semantic analysis is intentionally bounded to **24 rules per rulebook**. The graph has quadratic worst-case growth, so large organizations should partition rules into coherent rulebooks instead of creating one unbounded policy graph.
+Pairwise semantic analysis is intentionally bounded to **24 rules per rulebook**. The maximum unique graph size is `24 * 23 / 2 = 276` edges, and adding the 24th node requires at most 23 new comparisons. The same global bound applies when restorable superseded nodes are retained for graph completeness. Large organizations should partition rules into coherent rulebooks instead of creating one unbounded policy graph.
 
 ## Security model
 
@@ -250,7 +255,7 @@ python -m pip install -r requirements-dev.txt
 gltest tests/test_concord.py -v -s
 ```
 
-`tests/test_concord.py` contains 26 Direct Mode scenarios covering lifecycle, conflicts, deterministic precedence, blocked-rule graph enrichment, supersession/restoration, canon pinning, prompt-injection boundaries, and malicious leader/relationship rejection.
+`tests/test_concord.py` contains 36 Direct Mode scenarios covering lifecycle, malformed outputs, prompt-injection behavior, multi-conflict precedence, blocked-rule graph enrichment, supersession/restoration safety, canon status/pinning, and the 24-rule bound.
 
 ## Deployment
 
@@ -258,7 +263,7 @@ Concord has no constructor arguments.
 
 ```bash
 npm install -g genlayer
-genlayer network studionet
+genlayer network set studionet
 genlayer account show
 genlayer deploy --contract contracts/concord.py
 ```

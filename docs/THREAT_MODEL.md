@@ -16,6 +16,22 @@ Example: two rules cannot jointly be satisfied but the leader returns `COMPATIBL
 
 Mitigation: pairwise relation edges have their own independent validator prompt. Validators must confirm that both rules really can be obeyed together.
 
+## Threat: prompt injection in rule text or rulebook purpose
+
+Consequence: a leader treats quoted policy data as instructions and returns a false normalization or relation.
+
+Mitigation: prompts label purpose and rule text as untrusted data; validators receive the original data and independently verify substance. Behavioral tests cover normalization injection, relation injection, authority claims, and output-format imitation.
+
+Residual limitation: consensus quality still depends on validator availability and model capability; no prompt boundary proves semantic truth mathematically.
+
+## Threat: malformed model output
+
+Consequence: non-dict, missing-field, unknown-enum, oversized, or malformed relation output could corrupt canonical state.
+
+Mitigation: canonicalization maps malformed semantics to `AMBIGUOUS`, rejects oversized semantic fields, and maps invalid relation subtypes to an ambiguous edge. Strict mode blocks these states; validators reject invalid shapes.
+
+Residual limitation: permissive rulebooks can intentionally retain ambiguous draft state, so consumers must use structured status and fail closed.
+
 ## Threat: model invents hierarchy
 
 Mitigation: relation prompts are explicitly forbidden from using priority. Precedence is computed deterministically from stored priority and declared supersession.
@@ -30,7 +46,15 @@ Mitigation: active rule text and semantic interpretation are immutable. Priority
 
 ## Threat: later activation skips newer rules
 
-Mitigation: every newly proposed live node is compared not only with active nodes but also with blocked nodes. A blocked rule therefore accumulates relations with rules created after it.
+Mitigation: every newly proposed live node is compared with active, blocked, and superseded historical nodes. A blocked or restorable rule therefore accumulates relations with rules created after it. Restoration checks blocked edges too.
+
+## Threat: superseded restoration stale graph
+
+Consequence: an old rule is restored after a newer rule exists without an edge to that newer rule.
+
+Mitigation: superseded nodes remain in the bounded comparison set, and restoration requires complete relation coverage. Missing or unresolved restoration edges fail closed.
+
+Residual limitation: historical repealed rules are excluded because Concord has no repeal-restoration operation.
 
 ## Threat: unrelated rule falsely declared a replacement
 
@@ -38,15 +62,37 @@ Mitigation: supersession is not accepted blindly. Concord checks the semantic ed
 
 ## Threat: unresolved canon consumed as authoritative
 
-Mitigation: consumers can call `is_consistent` or `is_consistent_for`. The latter requires both current consistency and an exact expected canon hash.
+Mitigation: consumers can call `is_consistent` or `is_consistent_for`, then inspect `canon_status` and `get_canon_relations`. `RESOLVED_CONFLICTS` is explicitly distinct from `COHERENT`; `UNRESOLVED` and `AMBIGUOUS` remain fail-closed states.
+
+## Threat: model-generated metadata controls authority
+
+Consequence: a reason string, overlap description, or prose claim such as “priority 1000” changes precedence.
+
+Mitigation: metadata is explanatory only. Authority uses bounded stored priority and supersession fields; relation kind, conflict subtype, lifecycle, and resolution are bounded enums.
+
+Residual limitation: explanatory metadata can still mislead human readers if they ignore the bounded fields.
 
 ## Threat: state explosion / denial of service
 
-Pairwise comparison is bounded by `MAX_RULES_PER_BOOK = 24`. The owner controls proposals, preventing arbitrary third-party graph spam.
+Pairwise comparison is bounded by `MAX_RULES_PER_BOOK = 24`, for at most 276 unique edges and at most 23 comparisons for the 24th proposal. The owner controls proposals, preventing arbitrary third-party graph spam.
 
 ## Threat: hidden mutation through priority
 
 Priority changes are allowed only while a rule is blocked. Once active, priority is immutable. A different authority level must be represented as a new node or explicit governance transition.
+
+## Threat: supersession cycle
+
+Consequence: lineage becomes cyclic and restoration precedence becomes incoherent.
+
+Mitigation: a supersession target must be active, while a superseded node is not eligible as a new target. New amendments create forward-only lineage and cannot mutate existing edges.
+
+Residual limitation: this safety relies on the lifecycle invariant remaining intact if future methods are added.
+
+## Threat: event/runtime failure
+
+Consequence: a non-authoritative notification could make an otherwise valid graph write fail.
+
+Mitigation: relation storage is authoritative and relation event emission is intentionally absent after StudioNet rejected that event path. State reads and proof artifacts use persisted storage and receipts.
 
 ## Threat: stale relation after semantic mutation
 

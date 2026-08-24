@@ -8,15 +8,17 @@ recorded here so the deployment can be independently audited.
 
 | Field | Value |
 |---|---|
-| Source commit | `faee334f046fded76a6dd2b79d268d6495d285cf` |
+| Source commit | `a9555db` (`harden graph restoration and consumer canon views`) |
 | Network | GenLayer StudioNet |
 | CLI | `genlayer@0.39.1` |
 | Deployer | `0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2` |
-| Deployment transaction | `0x0be1d2477393f618193ee01d10b019eb7056608d3b2b0b89183eaadbe4a3aa1b` |
-| Contract address | `0xf529EDf5291B7fB78f0ba3922b9162A593972020` |
+| Deployment transaction | `0xd7ecd14bf1ce45f5c966b376791681e2554ce8102ce490ff17316d960129af40` |
+| Contract address | `0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA` |
 | Deployment receipt | `FINALIZED`, `MAJORITY_AGREE`; execution `SUCCESS` |
 
-The deployment schema was verified through the CLI and exposes 15 methods.
+The deployment schema was verified through the CLI and exposes 17 methods.
+The previous deployment at `0xf529EDf5291B7fB78f0ba3922b9162A593972020`
+is historical because the contract source changed after that deployment.
 
 ## Requirements
 
@@ -42,7 +44,7 @@ genlayer --version
 ## Select StudioNet
 
 ```bash
-    genlayer network set studionet
+genlayer network set studionet
 genlayer config get network
 genlayer account show
 ```
@@ -83,21 +85,29 @@ Minimum proof should include:
 
 ## Verified live lifecycle
 
-The following transactions were finalized or observed committed against the
-deployed address above:
+The following sequential transactions were finalized or observed committed
+against the hardened deployed address above. Rulebook `2` is the clean proof
+rulebook; rulebook `1` also contains live exploratory writes but is not used for
+the final proof state.
 
 | Operation | Transaction | Observed result |
 |---|---|---|
-| Create rulebook | `0xa421b31af1a96b3faf5f5fd8090975cd6b4bbd120ae3688148c887821d1a2fe7` | Rulebook `1`, strict, canon v0, consistent |
-| Propose rule 1 | `0xdf5e1f0b390ad986f4902b3b140bcd68f998da14a7add0604c5e87022d0d6b8a` | Active; canon v1 `86a4e0d1b951554f38a3c397c6378c934024a912022e11e3c61aab1d592a7462` |
-| Propose rule 2 | `0x116755b375df715e4699b5cbb4541064c3a14fe685616cad824343a04f5e3407` | Finalized; blocked; relation `CONFLICT` / `UNRESOLVED` |
-| Set rule 2 priority | `0xb8971c375143486b4bfb5aeedc2eadb0f975e7a6a17bcdcf2ebd7a8ab8127478` | Priority changed to `200` |
-| Activate rule 2 | `0x416ab079d2477e42eac76b203fcdc597b5957bee55e1cc6aa5d3fb43ac1759ed` | Two active rules; consistent; canon v2 `058c677f64bc7fcc80b5a4af1d5b7c98b01df35528deef84a7ecc45a976dc750` |
+| Create proof rulebook | `0xbc95c28953b85e00447979bd0aa1b6a105f9c997c62b8a01988382bd0bb9d5e0` | Rulebook `2`, strict, canon v0, consistent |
+| Propose rule 3 | `0xa4c252f40b98ead5a6bae2af60cf0493960f6ae2ae56094777f15fc8a6918c06` | Active; canon v1 `5202f13875fc753031ad2951be91637908a165ae537ddf391878f335aa968745` |
+| Propose rule 4 | `0x83e4ce10d9e8c48c44305f974a61abff576767cd2e043b501cef2cdf4f299802` | Finalized; blocked; relation `CONFLICT` / `UNRESOLVED` |
+| Set rule 4 priority | `0x4429817be6d9c0c348f8674e7dc395f17e65ec7f50636ae2242198450a268252` | Priority changed to `200`; same edge became `RIGHT_PREVAILS` |
+| Activate rule 4 | `0xa99c6b7fbd4d251d755f067114a0a789bd8df56287a81b3d11b803ccdbdbb054` | Two active rules; `RESOLVED_CONFLICTS`; canon v2 `db9debd7e8fa063f9c824f6343263b40fedf12fa32dba1d0bda6881626aa9e30` |
 
-Final relation readback: relation `1`, rule `1 -> 2`, kind `CONFLICT`, reason
-`EMERGENCY_OVERRIDE`, resolution `RIGHT_PREVAILS`. Final rulebook readback:
+Final relation readback: relation `2`, rule `3 -> 4`, kind `CONFLICT`, reason
+`REQUIRE_VS_PERMIT_APPROVAL_BYPASS`, resolution `RIGHT_PREVAILS`. Final rulebook readback:
 `active_count=2`, `blocked_count=0`, `relation_count=1`,
-`unresolved_conflicts=0`, `consistent=true`.
+`resolved_conflicts=1`, `unresolved_conflicts=0`, `canon_status=RESOLVED_CONFLICTS`,
+`consistent=true`. Exact `is_consistent_for` returned `true`; a zero hash returned
+`false`.
+
+Sanitized machine-readable artifacts are in [`proof/`](proof/): deployment,
+rulebook, semantic rule, conflict, priority-update, activation, and final-state
+records. They contain no private keys or credentials.
 
 ## Test before/after deployment
 

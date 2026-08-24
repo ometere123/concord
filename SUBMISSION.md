@@ -6,9 +6,13 @@ Standalone GenLayer Intelligent Contract.
 
 No frontend. No backend. No off-chain database. The Intelligent Contract is the source of truth.
 
+The hardened StudioNet deployment is `0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA`.
+Machine-readable lifecycle proof is recorded under `proof/` and linked from
+`DEPLOYMENT.md`.
+
 ## Primitive
 
-Concord is a reusable semantic consistency and precedence graph for natural-language rule systems.
+Concord is a consensus-backed semantic consistency and deterministic precedence layer for natural-language rule systems.
 
 It is intended for builders who need a constitution, policy stack, mandate set, operating agreement, or other natural-language rulebook to become shared machine-consumable state without allowing one AI response to silently decide authority.
 
@@ -47,8 +51,9 @@ Concord stores more than one-shot receipts:
 - revision and canon versions;
 - active canon hash;
 - consistency status.
+- explicit canon status distinguishing coherent state from deterministically resolved conflicts.
 
-Later rules are compared with blocked as well as active live nodes so a blocked node can never be activated later without relation coverage against rules added after it.
+Later rules are compared with active, blocked, and superseded historical nodes so a blocked or restorable node can never be activated later without relation coverage against rules added after it.
 
 ## Reuse surface
 
@@ -58,6 +63,8 @@ Other contracts can call:
 - `is_consistent_for(rulebook_id, expected_canon_hash)`
 - `current_canon_hash(rulebook_id)`
 - `get_canon(rulebook_id)`
+- `get_canon_relations(rulebook_id)`
+- `canon_status(rulebook_id)`
 - `relation_between(left_rule_id, right_rule_id)`
 
 The repository includes `IConcord` as a typed contract interface.
@@ -76,9 +83,12 @@ The repository includes `IConcord` as a typed contract interface.
 
 The repository contains:
 
-- 26 GenLayer Direct Mode tests;
+- 36 GenLayer Direct Mode tests;
 - malicious-leader normalization rejection;
 - malicious relation rejection;
+- prompt-injection behavior tests;
+- malformed-output and invalid-subtype tests;
+- multi-conflict precedence and 24-rule bound tests;
 - deterministic priority and canon tests;
 - an offline 14-check preflight;
 - architecture documentation;
