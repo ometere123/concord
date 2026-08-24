@@ -659,6 +659,19 @@ def test_validator_accepts_same_relation_facts_with_different_explanations(direc
     assert direct_vm.run_validator() is True
 
 
+def test_validator_accepts_conflict_subtype_disagreement_as_metadata(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    propose_first(direct_vm, contract, book_id)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(r"CONCORD / CLASSIFY RULE", relation("CONFLICT", "MODAL"))
+    contract.propose_rule(book_id, "An emergency withdrawal may bypass approval.", 100, 0)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY NORMALIZE RULE", clear_permit_semantics())
+    direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY CLASSIFY RULE", relation("CONFLICT", "AUTHORITY"))
+    assert direct_vm.run_validator() is True
+
+
 def test_ambiguous_independent_relation_rejects_confident_leader(direct_vm, direct_deploy):
     contract, book_id = deploy_book(direct_deploy)
     propose_first(direct_vm, contract, book_id)
@@ -670,6 +683,26 @@ def test_ambiguous_independent_relation_rejects_confident_leader(direct_vm, dire
     direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY NORMALIZE RULE", clear_permit_semantics())
     direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY CLASSIFY RULE RELATION", relation("AMBIGUOUS"))
     assert direct_vm.run_validator() is False
+
+
+def test_normalization_validator_rejects_conservative_ambiguous_leader(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    ambiguous = ambiguous_semantics()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", ambiguous)
+    contract.propose_rule(book_id, "A treasury withdrawal rule.", 100, 0)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY NORMALIZE RULE", clear_prohibit_semantics())
+    assert direct_vm.run_validator() is False
+
+
+def test_normalization_validator_accepts_shared_ambiguity(direct_vm, direct_deploy):
+    contract, book_id = deploy_book(direct_deploy)
+    ambiguous = ambiguous_semantics()
+    direct_vm.mock_llm(r"CONCORD / NORMALIZE RULE", ambiguous)
+    contract.propose_rule(book_id, "A treasury withdrawal rule.", 100, 0)
+    direct_vm.clear_mocks()
+    direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY NORMALIZE RULE", ambiguous)
+    assert direct_vm.run_validator() is True
 
 
 def test_normalization_validator_rejects_omitted_condition(direct_vm, direct_deploy):
@@ -707,6 +740,12 @@ def test_normalization_validator_allows_equivalent_wording(direct_vm, direct_dep
     direct_vm.mock_llm(r"CONCORD / INDEPENDENTLY NORMALIZE RULE", independent)
     direct_vm.mock_llm(r"CONCORD / COMPARE INDEPENDENT NORMALIZATIONS", {"equivalent": True})
     assert direct_vm.run_validator() is True
+
+
+def test_canon_hash_excludes_explanatory_conflict_subtype(direct_deploy):
+    canon_section = CONTRACT_SOURCE[CONTRACT_SOURCE.index("canon_payload = {"):CONTRACT_SOURCE.index("book.canon_hash", CONTRACT_SOURCE.index("canon_payload = {"))]
+    assert '"conflict_type"' not in canon_section
+    assert '"reason_code"' not in canon_section
 
 
 def test_malicious_relation_leader_is_rejected_behaviorally(direct_vm, direct_deploy):

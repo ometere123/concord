@@ -8,7 +8,7 @@ Concord protects the integrity of immutable rule text, normalized semantic meani
 
 Consequence: a validator may anchor on a plausible leader classification instead of independently deriving the material answer.
 
-Mitigation: normalization validators independently derive semantics from the original purpose and rule text; relation validators independently classify both original rules and accepted semantic records. Equivalence compares stable protocol facts rather than explanatory prose.
+Mitigation: normalization validators independently derive semantics from the original purpose and rule text; relation validators independently classify both original rules and accepted semantic records. Semantic-state disagreement rejects the leader proposal in either direction. Equivalence compares stable protocol facts rather than explanatory prose.
 
 Residual limitation: semantic judgment remains model-mediated, and bounded equivalence still cannot mathematically prove natural-language meaning.
 
@@ -22,7 +22,7 @@ Mitigation: validators independently derive semantics from the original immutabl
 
 Example: two rules cannot jointly be satisfied but the leader returns `COMPATIBLE`.
 
-Mitigation: pairwise relation edges have their own independent derivation prompt. Validators must independently classify both rules and agree on relation kind and conflict subtype where applicable.
+Mitigation: pairwise relation edges have their own independent derivation prompt. Validators must independently classify both rules and agree on the authoritative relation kind. Conflict subtype, overlap, and reason code remain explanatory metadata only.
 
 ## Threat: prompt injection in rule text or rulebook purpose
 
@@ -76,7 +76,7 @@ Mitigation: consumers can call `is_consistent` or `is_consistent_for`, then insp
 
 Consequence: a reason string, overlap description, or prose claim such as “priority 1000” changes precedence.
 
-Mitigation: metadata is explanatory only. Authority uses bounded stored priority and supersession fields; relation kind, conflict subtype, lifecycle, and resolution are bounded enums.
+Mitigation: metadata is explanatory only. Authority uses bounded stored priority and supersession fields; relation kind, lifecycle, and resolution are bounded protocol facts. Conflict subtype is retained for human-readable context but does not affect canon admission, precedence, lifecycle, or hashing.
 
 Residual limitation: explanatory metadata can still mislead human readers if they ignore the bounded fields.
 

@@ -403,14 +403,6 @@ def valid_relation_shape(value) -> bool:
     return isinstance(overlap, str) and len(overlap) <= MAX_RELATION_NOTE and isinstance(reason, str) and 0 < len(reason) <= MAX_REASON_CODE
 
 
-def compatible_conflict_type(left: int, right: int) -> bool:
-    # The relation kind is the primary protocol fact. Conflict subtypes are
-    # compatible when both derivations identify a bounded, non-NONE conflict;
-    # models may name the same incompatibility as modal, conditional, or an
-    # exception overlap. OTHER is an explicit conservative fallback.
-    return int(left) != CONFLICT_NONE and int(right) != CONFLICT_NONE
-
-
 def pair_key(rulebook_id: int, rule_a: int, rule_b: int) -> str:
     left = min(int(rule_a), int(rule_b))
     right = max(int(rule_a), int(rule_b))
@@ -621,13 +613,13 @@ class Concord(gl.Contract):
                     return False
                 if int(candidate["modality"]) != int(independent["modality"]):
                     return False
-                if int(candidate["semantic_state"]) == SEMANTIC_CLEAR and int(independent["semantic_state"]) == SEMANTIC_AMBIGUOUS:
+                if int(candidate["semantic_state"]) != int(independent["semantic_state"]):
                     return False
                 if bool(str(candidate["condition"]).strip()) != bool(str(independent["condition"]).strip()):
                     return False
                 if bool(str(candidate["exception"]).strip()) != bool(str(independent["exception"]).strip()):
                     return False
-                if int(candidate["semantic_state"]) == SEMANTIC_AMBIGUOUS and int(independent["semantic_state"]) == SEMANTIC_CLEAR:
+                if int(candidate["semantic_state"]) == SEMANTIC_AMBIGUOUS:
                     return True
                 comparison = gl.nondet.exec_prompt(
                     build_compare_semantics_prompt(purpose_mem, text_mem, candidate, independent),
@@ -665,8 +657,6 @@ class Concord(gl.Contract):
                 if int(independent["kind"]) == REL_AMBIGUOUS:
                     return int(candidate["kind"]) == REL_AMBIGUOUS
                 if int(candidate["kind"]) != int(independent["kind"]):
-                    return False
-                if int(candidate["kind"]) == REL_CONFLICT and not compatible_conflict_type(candidate["conflict_type"], independent["conflict_type"]):
                     return False
                 return True
             except Exception:
@@ -775,7 +765,6 @@ class Concord(gl.Contract):
                 "left": int(relation.left_rule_id),
                 "right": int(relation.right_rule_id),
                 "kind": int(relation.kind),
-                "conflict_type": int(relation.conflict_type),
                 "resolution": int(relation.resolution),
                 "left_semantic_hash": str(relation.left_semantic_hash),
                 "right_semantic_hash": str(relation.right_semantic_hash),

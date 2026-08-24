@@ -35,7 +35,7 @@ A missing actor/action, unknown modality, or non-atomic rule fails closed to `AM
 
 ### Validator task
 
-The validator independently normalizes the original purpose and rule text. Deterministic checks compare modality, semantic clarity, and whether a material condition or explicit exception is present. A bounded equivalence call then checks actor, action, object, condition, exception, and scope for substantive agreement. Minor wording differences are allowed; a missing or invented material fact is rejected. The validator returns only a boolean acceptance decision.
+The validator independently normalizes the original purpose and rule text. The leader and validator must agree on the protocol semantic state: CLEAR versus AMBIGUOUS. A disagreement in either direction rejects that leader proposal, so neither an overconfident CLEAR nor a leader-only conservative AMBIGUOUS state is finalized. For shared CLEAR state, deterministic checks compare modality, and whether a material condition or explicit exception is present; a bounded equivalence call then checks actor, action, object, condition, exception, and scope for substantive agreement. Minor wording differences are allowed; a missing or invented material fact is rejected. Shared AMBIGUOUS state is accepted without requiring identical ambiguity prose. The validator returns only a boolean acceptance decision.
 
 
 ## Boundary 2: relation analysis
@@ -55,7 +55,7 @@ A conflict requires a plausible shared case in which both rules apply but cannot
 
 ### Validator task
 
-The validator independently classifies the relationship from both original rule texts, both accepted semantic records, and the rulebook purpose. Consensus compares stable protocol facts: relation kind and a bounded, compatible conflict subtype (both derivations must identify a non-`NONE` conflict subtype, while modal/conditional/exception labels may vary). `overlap` and `reason_code` are human-readable metadata and may differ across derivations. A validator-derived `AMBIGUOUS` result fails closed against any confident leader classification; the leader must also be ambiguous for that edge to pass.
+The validator independently classifies the relationship from both original rule texts, both accepted semantic records, and the rulebook purpose. Consensus compares the authoritative relation kind only. `conflict_type`, `overlap`, and `reason_code` are explanatory metadata; they remain available in public relation views but are not used for admission, precedence, lifecycle, or `canon_hash`. A validator-derived `AMBIGUOUS` result fails closed against any confident leader classification; the leader must also be ambiguous for that edge to pass.
 
 ## Precedence is not consensus output
 
