@@ -4,9 +4,9 @@
 
 Two validators can faithfully interpret the same prose with slightly different wording. Exact string equality over actor/action summaries would reject many substantively equivalent interpretations.
 
-Concord therefore uses non-comparative validation with `gl.vm.run_nondet_unsafe`.
+Concord therefore uses two bounded consensus calls with `gl.vm.run_nondet_unsafe`.
 
-The leader proposes a bounded result. A validator independently checks whether the leader result is substantively faithful to the immutable source material.
+The leader derives a bounded result. The validator independently derives the material answer from the original source data before comparing protocol-relevant facts. This reduces anchoring on the leader candidate without making unstable explanatory prose part of equivalence.
 
 ## Boundary 1: normalization
 
@@ -35,16 +35,8 @@ A missing actor/action, unknown modality, or non-atomic rule fails closed to `AM
 
 ### Validator task
 
-The validator receives the original rule and leader candidate and checks whether the candidate:
+The validator independently normalizes the original purpose and rule text. Deterministic checks compare modality, semantic clarity, and whether a material condition or explicit exception is present. A bounded equivalence call then checks actor, action, object, condition, exception, and scope for substantive agreement. Minor wording differences are allowed; a missing or invented material fact is rejected. The validator returns only a boolean acceptance decision.
 
-- uses the correct modality;
-- preserves material conditions;
-- preserves explicit exceptions;
-- does not invent authority or scope;
-- does not collapse multiple independent norms;
-- does not claim a distorted interpretation is clear.
-
-The validator returns a boolean acceptance decision.
 
 ## Boundary 2: relation analysis
 
@@ -63,14 +55,7 @@ A conflict requires a plausible shared case in which both rules apply but cannot
 
 ### Validator task
 
-The validator independently checks the proposed edge against both source rules.
-
-It is specifically instructed to reject:
-
-- `UNRELATED` when material overlap exists;
-- `COMPATIBLE` when both norms cannot jointly be satisfied;
-- `CONFLICT` when no plausible shared case exists;
-- confident classification when the relation is genuinely ambiguous.
+The validator independently classifies the relationship from both original rule texts, both accepted semantic records, and the rulebook purpose. Consensus compares stable protocol facts: relation kind and a bounded, compatible conflict subtype (both derivations must identify a non-`NONE` conflict subtype, while modal/conditional/exception labels may vary). `overlap` and `reason_code` are human-readable metadata and may differ across derivations. A validator-derived `AMBIGUOUS` result fails closed against any confident leader classification; the leader must also be ambiguous for that edge to pass.
 
 ## Precedence is not consensus output
 
