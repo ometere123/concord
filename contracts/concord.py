@@ -69,6 +69,7 @@ class Rulebook:
     ambiguous_relations: u32
     consistent: bool
     canon_hash: str
+    resolved_conflicts: u32
 
 
 @allow_storage
@@ -124,6 +125,8 @@ class IConcord:
         def get_relation(self, relation_id: u256) -> dict: ...
         def relation_between(self, left_rule_id: u256, right_rule_id: u256) -> dict: ...
         def get_canon(self, rulebook_id: u256) -> list[dict]: ...
+        def get_canon_relations(self, rulebook_id: u256) -> list[dict]: ...
+        def canon_status(self, rulebook_id: u256) -> dict: ...
         def is_consistent(self, rulebook_id: u256) -> bool: ...
         def is_consistent_for(self, rulebook_id: u256, expected_canon_hash: str) -> bool: ...
         def current_canon_hash(self, rulebook_id: u256) -> str: ...
@@ -144,10 +147,6 @@ class RulebookCreated(gl.Event):
 
 class RuleProposed(gl.Event):
     def __init__(self, rule_id: u256, rulebook_id: u256, status: u8, /, **blob): ...
-
-
-class RelationRecorded(gl.Event):
-    def __init__(self, relation_id: u256, left_rule_id: u256, right_rule_id: u256, kind: u8, /, **blob): ...
 
 
 class RuleActivated(gl.Event):
@@ -232,6 +231,16 @@ def resolution_name(value: int) -> str:
     }.get(int(value), "UNRESOLVED")
 
 
+def canon_status_name(unresolved: int, ambiguous: int, resolved: int) -> str:
+    if int(ambiguous) > 0:
+        return "AMBIGUOUS"
+    if int(unresolved) > 0:
+        return "UNRESOLVED"
+    if int(resolved) > 0:
+        return "RESOLVED_CONFLICTS"
+    return "COHERENT"
+
+
 def message_timestamp() -> int:
     message = getattr(gl, "message", None)
     raw_message = getattr(message, "raw", None)
@@ -278,13 +287,21 @@ def canonical_semantics(raw) -> dict:
     atomic = raw.get("atomic") is True
     ambiguity = str(raw.get("ambiguity", "AMBIGUOUS")).strip().upper()
     semantic_state = SEMANTIC_CLEAR if ambiguity == "CLEAR" else SEMANTIC_AMBIGUOUS
-    actor = bounded(str(raw.get("actor", "")), MAX_SEMANTIC_FIELD)
-    action = bounded(str(raw.get("action", "")), MAX_SEMANTIC_FIELD)
-    obj = bounded(str(raw.get("object", "")), MAX_SEMANTIC_FIELD)
-    condition = bounded(str(raw.get("condition", "")), MAX_SEMANTIC_FIELD)
-    exception = bounded(str(raw.get("exception", "")), MAX_SEMANTIC_FIELD)
-    scope = bounded(str(raw.get("scope", "")), MAX_SEMANTIC_FIELD)
-    ambiguity_reason = bounded(str(raw.get("ambiguity_reason", "")), MAX_SEMANTIC_FIELD)
+    raw_fields = {
+        key: str(raw.get(key, ""))
+        for key in ("actor", "action", "object", "condition", "exception", "scope", "ambiguity_reason")
+    }
+    oversized = any(len(value) > MAX_SEMANTIC_FIELD for value in raw_fields.values())
+    actor = bounded(raw_fields["actor"], MAX_SEMANTIC_FIELD)
+    action = bounded(raw_fields["action"], MAX_SEMANTIC_FIELD)
+    obj = bounded(raw_fields["object"], MAX_SEMANTIC_FIELD)
+    condition = bounded(raw_fields["condition"], MAX_SEMANTIC_FIELD)
+    exception = bounded(raw_fields["exception"], MAX_SEMANTIC_FIELD)
+    scope = bounded(raw_fields["scope"], MAX_SEMANTIC_FIELD)
+    ambiguity_reason = bounded(raw_fields["ambiguity_reason"], MAX_SEMANTIC_FIELD)
+    if oversized:
+        semantic_state = SEMANTIC_AMBIGUOUS
+        ambiguity_reason = "OVERSIZED_SEMANTIC_FIELD"
     if not atomic:
         semantic_state = SEMANTIC_AMBIGUOUS
         if ambiguity_reason == "":
@@ -331,15 +348,18 @@ def valid_semantics_shape(value) -> bool:
 def canonical_relation(raw) -> dict:
     if not isinstance(raw, dict):
         raw = {}
-    kind = {
+    raw_kind = str(raw.get("relation", "AMBIGUOUS")).strip().upper()
+    kind_values = {
         "UNRELATED": REL_UNRELATED,
         "COMPATIBLE": REL_COMPATIBLE,
         "REDUNDANT": REL_REDUNDANT,
         "SPECIALIZES": REL_SPECIALIZES,
         "CONFLICT": REL_CONFLICT,
         "AMBIGUOUS": REL_AMBIGUOUS,
-    }.get(str(raw.get("relation", "AMBIGUOUS")).strip().upper(), REL_AMBIGUOUS)
-    conflict_type = {
+    }
+    kind = kind_values.get(raw_kind, REL_AMBIGUOUS)
+    raw_conflict_type = str(raw.get("conflict_type", "OTHER")).strip().upper()
+    conflict_values = {
         "NONE": CONFLICT_NONE,
         "MODAL": CONFLICT_MODAL,
         "CONDITION": CONFLICT_CONDITION,
@@ -347,7 +367,14 @@ def canonical_relation(raw) -> dict:
         "SCOPE": CONFLICT_SCOPE,
         "AUTHORITY": CONFLICT_AUTHORITY,
         "OTHER": CONFLICT_OTHER,
-    }.get(str(raw.get("conflict_type", "OTHER")).strip().upper(), CONFLICT_OTHER)
+    }
+    conflict_type = conflict_values.get(raw_conflict_type, CONFLICT_OTHER)
+    if raw_kind not in kind_values:
+        kind = REL_AMBIGUOUS
+        conflict_type = CONFLICT_NONE
+    elif raw_kind == "CONFLICT" and raw_conflict_type not in conflict_values:
+        kind = REL_AMBIGUOUS
+        conflict_type = CONFLICT_NONE
     if kind != REL_CONFLICT:
         conflict_type = CONFLICT_NONE
     reason_code = bounded(str(raw.get("reason_code", "UNSPECIFIED")), MAX_REASON_CODE).upper()
@@ -662,7 +689,7 @@ class Concord(gl.Contract):
             return None
         return self.relations.get(relation_id)
 
-    def _blocking_reason(self, book: Rulebook, rule: Rule) -> str:
+    def _blocking_reason(self, book: Rulebook, rule: Rule, include_blocked: bool = False) -> str:
         if int(rule.semantic_state) != SEMANTIC_CLEAR:
             return "SEMANTIC_AMBIGUITY"
         if int(rule.supersedes_rule_id) != 0:
@@ -677,12 +704,12 @@ class Concord(gl.Contract):
             if int(other_id) == int(rule.rule_id):
                 continue
             other = self._require_rule(other_id)
-            if int(other.status) != RULE_ACTIVE:
+            if int(other.status) != RULE_ACTIVE and not (include_blocked and int(other.status) == RULE_BLOCKED):
                 continue
             relation = self._relation_for_pair(int(rule.rulebook_id), int(rule.rule_id), int(other.rule_id))
             if relation is None:
-                return "MISSING_ACTIVE_RELATION"
-            if not bool(book.strict_mode):
+                return "MISSING_ACTIVE_RELATION" if int(other.status) == RULE_ACTIVE else "MISSING_RESTORATION_RELATION"
+            if not include_blocked and not bool(book.strict_mode):
                 continue
             if int(relation.kind) == REL_AMBIGUOUS:
                 return "AMBIGUOUS_RELATION"
@@ -707,6 +734,7 @@ class Concord(gl.Contract):
         blocked_count = 0
         unresolved = 0
         ambiguous = 0
+        resolved = 0
         active_payload = []
         for rule_id in book.rule_ids:
             rule = self._require_rule(rule_id)
@@ -734,12 +762,15 @@ class Concord(gl.Contract):
                 "left": int(relation.left_rule_id),
                 "right": int(relation.right_rule_id),
                 "kind": int(relation.kind),
+                "conflict_type": int(relation.conflict_type),
                 "resolution": int(relation.resolution),
                 "left_semantic_hash": str(relation.left_semantic_hash),
                 "right_semantic_hash": str(relation.right_semantic_hash),
             })
             if int(relation.kind) == REL_CONFLICT and int(relation.resolution) == RES_UNRESOLVED:
                 unresolved += 1
+            if int(relation.kind) == REL_CONFLICT and int(relation.resolution) != RES_UNRESOLVED:
+                resolved += 1
             if int(relation.kind) == REL_AMBIGUOUS:
                 ambiguous += 1
         canon_payload = {
@@ -752,6 +783,7 @@ class Concord(gl.Contract):
         book.blocked_count = u32(blocked_count)
         book.unresolved_conflicts = u32(unresolved)
         book.ambiguous_relations = u32(ambiguous)
+        book.resolved_conflicts = u32(resolved)
         book.consistent = unresolved == 0 and ambiguous == 0
         book.canon_hash = hash_text(json.dumps(canon_payload, sort_keys=True, separators=(",", ":")))
 
@@ -805,6 +837,7 @@ class Concord(gl.Contract):
         book.blocked_count = u32(0)
         book.unresolved_conflicts = u32(0)
         book.ambiguous_relations = u32(0)
+        book.resolved_conflicts = u32(0)
         book.consistent = True
         self._refresh_book_state(rulebook_id)
         RulebookCreated(rulebook_id, gl.message.sender_address, name=name, strict_mode=bool(strict_mode)).emit()
@@ -865,7 +898,9 @@ class Concord(gl.Contract):
             if int(other_id) == int(rule_id):
                 continue
             other = self._require_rule(other_id)
-            if int(other.status) in (RULE_REPEALED, RULE_SUPERSEDED):
+            # Superseded rules remain historical semantic nodes so future
+            # proposals retain the edges required for safe restoration.
+            if int(other.status) == RULE_REPEALED:
                 continue
             other_mem = self._rule_memory(other)
             outcome = self._analyze_relation(str(book.purpose), other_mem, candidate_mem)
@@ -949,7 +984,7 @@ class Concord(gl.Contract):
         if int(replacement.status) == RULE_ACTIVE:
             raise gl.vm.UserError(f"{ERR_EXPECTED}: replacement is still active")
         self._refresh_relation_resolutions(rule)
-        blocker = self._blocking_reason(book, rule)
+        blocker = self._blocking_reason(book, rule, include_blocked=True)
         if blocker != "":
             raise gl.vm.UserError(f"{ERR_EXPECTED}: cannot restore: {blocker}")
         rule.status = u8(RULE_ACTIVE)
@@ -969,7 +1004,11 @@ class Concord(gl.Contract):
             "canon_version": int(book.canon_version), "rule_count": len(book.rule_ids),
             "relation_count": len(book.relation_ids), "active_count": int(book.active_count),
             "blocked_count": int(book.blocked_count), "unresolved_conflicts": int(book.unresolved_conflicts),
-            "ambiguous_relations": int(book.ambiguous_relations), "consistent": bool(book.consistent),
+            "resolved_conflicts": int(book.resolved_conflicts), "ambiguous_relations": int(book.ambiguous_relations),
+            "has_conflicts": int(book.resolved_conflicts) + int(book.unresolved_conflicts) > 0,
+            "has_resolved_conflicts": int(book.resolved_conflicts) > 0,
+            "canon_status": canon_status_name(book.unresolved_conflicts, book.ambiguous_relations, book.resolved_conflicts),
+            "consistent": bool(book.consistent),
             "canon_hash": str(book.canon_hash),
         }
 
@@ -1032,6 +1071,47 @@ class Concord(gl.Contract):
                 "priority": int(rule.priority), "semantic_hash": str(rule.semantic_hash),
             })
         return result
+
+    @gl.public.view
+    def get_canon_relations(self, rulebook_id: u256) -> list[dict]:
+        book = self._require_rulebook(rulebook_id)
+        active = {}
+        for rule_id in book.rule_ids:
+            rule = self._require_rule(rule_id)
+            if int(rule.status) == RULE_ACTIVE:
+                active[str(int(rule_id))] = True
+        result = []
+        for relation_id in book.relation_ids:
+            relation = self._require_relation(relation_id)
+            if not active.get(str(int(relation.left_rule_id)), False):
+                continue
+            if not active.get(str(int(relation.right_rule_id)), False):
+                continue
+            result.append({
+                "relation_id": int(relation.relation_id),
+                "left_rule_id": int(relation.left_rule_id),
+                "right_rule_id": int(relation.right_rule_id),
+                "kind": int(relation.kind), "kind_name": relation_name(int(relation.kind)),
+                "conflict_type": int(relation.conflict_type),
+                "resolution": int(relation.resolution), "resolution_name": resolution_name(int(relation.resolution)),
+                "left_semantic_hash": str(relation.left_semantic_hash),
+                "right_semantic_hash": str(relation.right_semantic_hash),
+            })
+        return result
+
+    @gl.public.view
+    def canon_status(self, rulebook_id: u256) -> dict:
+        book = self._require_rulebook(rulebook_id)
+        return {
+            "status": canon_status_name(book.unresolved_conflicts, book.ambiguous_relations, book.resolved_conflicts),
+            "consistent": bool(book.consistent),
+            "has_conflicts": int(book.resolved_conflicts) + int(book.unresolved_conflicts) > 0,
+            "resolved_conflicts": int(book.resolved_conflicts),
+            "unresolved_conflicts": int(book.unresolved_conflicts),
+            "ambiguous_relations": int(book.ambiguous_relations),
+            "canon_hash": str(book.canon_hash),
+            "canon_version": int(book.canon_version),
+        }
 
     @gl.public.view
     def blocking_reason(self, rule_id: u256) -> str:
