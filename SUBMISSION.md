@@ -6,7 +6,7 @@ Standalone GenLayer Intelligent Contract.
 
 No frontend. No backend. No off-chain database. The Intelligent Contract is the source of truth.
 
-The hardened StudioNet deployment is `0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA`, from source commit `f3b41089de800e62b8d6a633e7fd9301fa44801d`.
+The hardened StudioNet deployment is `0x67a027446838296FcB3022B376c8ff3873a4566C`, from source commit `bd6682d81afa7063d6b595dcdab04d220aed8bbb`.
 Machine-readable lifecycle proof is recorded under `proof/` and linked from
 `DEPLOYMENT.md`.
 
@@ -21,7 +21,7 @@ It is intended for builders who need a constitution, policy stack, mandate set, 
 Concord has two independent non-deterministic consensus boundaries:
 
 1. **Rule normalization**: a leader proposes a bounded semantic representation of one atomic norm. Validators independently derive the rule meaning from the immutable source and compare stable substantive facts, allowing harmless wording variance.
-2. **Rule relation analysis**: a leader proposes whether two rules are unrelated, compatible, redundant, specializing, conflicting, or ambiguous. Validators independently derive the relation from both source rules and semantic records, comparing relation kind and conflict subtype rather than explanatory prose.
+2. **Rule relation analysis**: a leader proposes whether two rules are unrelated, compatible, redundant, specializing, conflicting, or ambiguous. Validators independently derive the relation from both source rules and semantic records, comparing authoritative relation kind; conflict subtype is explanatory metadata rather than canonical state.
 
 Both use `gl.vm.run_nondet_unsafe` with custom validators.
 
@@ -85,13 +85,14 @@ The repository includes `IConcord` as a typed contract interface.
 
 The repository contains:
 
-- 45 GenLayer Direct Mode tests;
+- 49 GenLayer Direct Mode tests;
 - malicious-leader normalization rejection;
 - malicious relation rejection;
 - prompt-injection behavior tests;
 - malformed-output and invalid-subtype tests;
 - multi-conflict precedence and 24-rule bound tests;
 - deterministic priority and canon tests;
+- symmetric CLEAR/AMBIGUOUS convergence tests and conflict-subtype metadata tests;
 - an offline 14-check preflight;
 - architecture documentation;
 - consensus documentation;

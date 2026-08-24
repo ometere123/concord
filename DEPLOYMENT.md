@@ -8,12 +8,12 @@ recorded here so the deployment can be independently audited.
 
 | Field | Value |
 |---|---|
-| Source commit | `f3b41089de800e62b8d6a633e7fd9301fa44801d` (`preserve validator convergence on conservative ambiguity`) |
+| Source commit | `bd6682d81afa7063d6b595dcdab04d220aed8bbb` (`Harden semantic convergence and conflict metadata policy`) |
 | Network | GenLayer StudioNet |
 | CLI | `genlayer@0.39.1` |
-| Deployer | `0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2` |
-| Deployment transaction | `0x05443af49bd3f847b953afefcd9bb1f0e3c4f39d9c29ab95b357b705ff7a7594` |
-| Contract address | `0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA` |
+| Deployer | `0xA7EeAE0E93793e3146Cb14b0700251B8b0EBADFB` |
+| Deployment transaction | `0xacfed35041fae0ca9224ab07034838145f51c2f112809e8b968814be5584a2f2` |
+| Contract address | `0x67a027446838296FcB3022B376c8ff3873a4566C` |
 | Deployment receipt | `FINALIZED`, `MAJORITY_AGREE`; execution `SUCCESS` |
 
 The deployment schema was verified through the CLI and exposes 17 methods. Direct StudioNet RPC independently returned status `0x1` for the deployment transaction; its GenLayer receipt format returned `contractAddress: null`, while the CLI returned the contract address above.
@@ -85,15 +85,15 @@ Minimum proof should include:
 
 ## Current live evidence
 
-The corrected deployment has finalized, successful consensus evidence for rulebook creation, an active first rule, a finalized equal-priority conflict proposal, and deterministic priority resolution. A fresh strict activation attempt was correctly rejected when a model-derived rule remained `AMBIGUOUS`; a separate same-actor conflict attempt finalized `MAJORITY_DISAGREE`. These are recorded as limitations rather than presented as a completed activation lifecycle.
+The final-source deployment has a complete clean lifecycle on rulebook `1`: two CLEAR rules, a stored CONFLICT edge, equal-priority blocking, deterministic priority resolution on the same edge, activation without semantic re-analysis, and final `RESOLVED_CONFLICTS` canon state.
 
 | Operation | Transaction | Observed result |
 |---|---|---|
-| Create proof rulebook 1 | `0xe074e60eaa070b0ac6302305ea500237ddcb4e0ec8da0501a406ee22acd8bd7e` | Finalized; rulebook 1, strict |
-| Propose first rule | `0x9e0dccedaf0d6cefe383fa82991526e0b5fe0e93e550a45232bdc61199f52842` | Finalized; active; canon v1 |
-| Propose equal-priority conflict | `0xea792cfc3973150a318b2fa01bd4e51c52677721012d8b9af860a31ae07a503f` | Finalized; `CONFLICT` / `UNRESOLVED`; rule blocked |
-| Set blocked priority | `0x742cd7d9fdf9cc467da14501be0402ace5527888f2fba99acc123acce4a9a2ab` | Finalized; relation `RIGHT_PREVAILS` |
-| Activation attempt | `0x171d998ddcc799d57a2d33b26792a13260a06f34ddc0a42f8d519a6c4154a612` | Finalized; rejected because rule semantic state remained `AMBIGUOUS` |
+| Create final proof rulebook 1 | `0x9a7f171de158b3096b70b224ee70369e68740bc606bcfb7806a70d67bc2852e4` | Finalized; strict; rulebook 1 |
+| Propose Rule A | `0x5925745612a28ebea221145467437dded0d8de736907a4b3398b7b2aa13b848f` | Finalized; CLEAR; ACTIVE; canon v1 |
+| Propose equal-priority Rule B | `0x79ffc24bc6f70a2ca1b271851e245c5571586395d8b0e402a369de010b930340` | Finalized; CLEAR; `CONFLICT` / `UNRESOLVED`; BLOCKED |
+| Set Rule B priority to 200 | `0x7b60cbeb65805a5c8a4a5c7820d672bb5bef222bb70af0633efdc5d1d9e71525` | Finalized; same relation `RIGHT_PREVAILS`; blocking reason empty |
+| Activate Rule B | `0x8becc751189a7074526264ef92f770be35c9cd7e03e52fa518e4f9468701477d` | Finalized; Rule B ACTIVE; canon v2 |
 
 ## Historical live lifecycle
 

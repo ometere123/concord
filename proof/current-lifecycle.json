@@ -1,26 +1,24 @@
 {
-  "source_commit": "f3b41089de800e62b8d6a633e7fd9301fa44801d",
-  "contract_address": "0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA",
+  "source_commit": "bd6682d81afa7063d6b595dcdab04d220aed8bbb",
+  "contract_address": "0x67a027446838296FcB3022B376c8ff3873a4566C",
   "rulebook_id": 1,
-  "strict_mode": true,
   "transactions": {
-    "create_rulebook": "0xe074e60eaa070b0ac6302305ea500237ddcb4e0ec8da0501a406ee22acd8bd7e",
-    "first_rule": "0x9e0dccedaf0d6cefe383fa82991526e0b5fe0e93e550a45232bdc61199f52842",
-    "conflict_proposal": "0xea792cfc3973150a318b2fa01bd4e51c52677721012d8b9af860a31ae07a503f",
-    "priority_update": "0x742cd7d9fdf9cc467da14501be0402ace5527888f2fba99acc123acce4a9a2ab",
-    "activation_attempt": "0x171d998ddcc799d57a2d33b26792a13260a06f34ddc0a42f8d519a6c4154a612"
+    "create_rulebook": "0x9a7f171de158b3096b70b224ee70369e68740bc606bcfb7806a70d67bc2852e4",
+    "rule_a": "0x5925745612a28ebea221145467437dded0d8de736907a4b3398b7b2aa13b848f",
+    "rule_b_conflict": "0x79ffc24bc6f70a2ca1b271851e245c5571586395d8b0e402a369de010b930340",
+    "priority_update": "0x7b60cbeb65805a5c8a4a5c7820d672bb5bef222bb70af0633efdc5d1d9e71525",
+    "activation": "0x8becc751189a7074526264ef92f770be35c9cd7e03e52fa518e4f9468701477d"
   },
   "observed_state": {
-    "active_count": 1,
-    "blocked_count": 1,
-    "canon_version": 1,
-    "canon_hash": "f744b77967a7007997483624a2564dcf31335483b609e29ecf7f0504a0f8e186",
-    "canon_status": "COHERENT",
-    "relation": "CONFLICT / UNRESOLVED",
-    "priority_after_update": 200,
-    "resolution_after_update": "RIGHT_PREVAILS",
+    "active_count": 2,
+    "blocked_count": 0,
+    "canon_version": 2,
+    "canon_hash": "8b3e00983548ade2b9a799cf960a7b47639def3eb535fa6e4c17649b2e285438",
+    "canon_status": "RESOLVED_CONFLICTS",
+    "relation": "CONFLICT / RIGHT_PREVAILS",
+    "resolved_conflicts": 1,
+    "unresolved_conflicts": 0,
     "exact_pin": true,
     "stale_pin": false
-  },
-  "limitation": "Activation was correctly rejected because the live semantic record for rule 2 remained AMBIGUOUS under strict mode. A separate same-actor conflict attempt finalized MAJORITY_DISAGREE."
+  }
 }

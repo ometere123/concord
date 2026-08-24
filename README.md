@@ -22,8 +22,8 @@ Instead of repeatedly asking an LLM, "is this policy okay?", Concord maintains:
 
 The result is not a one-shot AI verdict. It is a living, versioned rule graph whose usefulness increases as more rules are added.
 
-Current hardened StudioNet deployment: `0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA`,
-deployed from source commit `f3b41089de800e62b8d6a633e7fd9301fa44801d`. See the [deployment and sanitized proof records](DEPLOYMENT.md).
+Current hardened StudioNet deployment: `0x67a027446838296FcB3022B376c8ff3873a4566C`,
+deployed from source commit `bd6682d81afa7063d6b595dcdab04d220aed8bbb`. See the [deployment and sanitized proof records](DEPLOYMENT.md).
 
 ## Why this primitive exists
 
@@ -255,7 +255,7 @@ python -m pip install -r requirements-dev.txt
 gltest tests/test_concord.py -v -s
 ```
 
-`tests/test_concord.py` contains 45 Direct Mode scenarios covering independent validator derivation, malicious disagreement, lifecycle, malformed outputs, prompt-injection behavior, multi-conflict precedence, blocked-rule graph enrichment, nested supersession/restoration safety, canon status/pinning, and the 24-rule bound.
+`tests/test_concord.py` contains 49 Direct Mode scenarios covering independent validator derivation, symmetric semantic-state convergence, malicious disagreement, lifecycle, malformed outputs, prompt-injection behavior, multi-conflict precedence, blocked-rule graph enrichment, nested supersession/restoration safety, canon status/pinning, and the 24-rule bound.
 
 ## Deployment
 

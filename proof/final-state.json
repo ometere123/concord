@@ -1,24 +1,17 @@
 {
-  "contract_address": "0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA",
+  "source_commit": "bd6682d81afa7063d6b595dcdab04d220aed8bbb",
+  "contract_address": "0x67a027446838296FcB3022B376c8ff3873a4566C",
   "rulebook_id": 1,
-  "rule_ids": [1, 2],
-  "relation_id": 1,
-  "canon_version": 1,
-  "canon_hash": "f744b77967a7007997483624a2564dcf31335483b609e29ecf7f0504a0f8e186",
-  "canon_status": "COHERENT",
-  "consistent": true,
-  "has_conflicts": false,
-  "resolved_conflicts": 0,
+  "active_count": 2,
+  "blocked_count": 0,
+  "resolved_conflicts": 1,
   "unresolved_conflicts": 0,
-  "ambiguous_relations": 0,
-  "relation": {
-    "kind": "CONFLICT",
-    "resolution": "UNRESOLVED",
-    "left_rule_id": 1,
-    "right_rule_id": 2
-  },
-  "pin_checks": {
-    "exact_hash": true,
-    "stale_hash": false
-  }
+  "canon_status": "RESOLVED_CONFLICTS",
+  "canon_version": 2,
+  "canon_hash": "8b3e00983548ade2b9a799cf960a7b47639def3eb535fa6e4c17649b2e285438",
+  "exact_pin": true,
+  "stale_pin": false,
+  "relation_id": 1,
+  "relation_kind": "CONFLICT",
+  "resolution": "RIGHT_PREVAILS"
 }
