@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "transactionHash": "0x05443af49bd3f847b953afefcd9bb1f0e3c4f39d9c29ab95b357b705ff7a7594",
+    "from": "0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2",
+    "to": "0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA",
+    "contractAddress": null,
+    "status": "0x1"
+  },
+  "notes": "Raw public RPC fields observed from https://studio.genlayer.com/api. GenLayer RPC returned contractAddress null; the CLI deployment receipt returned the contract address."
+}

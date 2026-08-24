@@ -4,17 +4,25 @@
 
 Concord protects the integrity of immutable rule text, normalized semantic meaning, the pairwise conflict graph, explicit precedence, lifecycle history, canonical consistency state, and downstream `canon_hash` pins.
 
+## Threat: anchoring on a leader candidate
+
+Consequence: a validator may anchor on a plausible leader classification instead of independently deriving the material answer.
+
+Mitigation: normalization validators independently derive semantics from the original purpose and rule text; relation validators independently classify both original rules and accepted semantic records. Equivalence compares stable protocol facts rather than explanatory prose.
+
+Residual limitation: semantic judgment remains model-mediated, and bounded equivalence still cannot mathematically prove natural-language meaning.
+
 ## Threat: malicious leader changes rule meaning
 
 Example: source text prohibits an action but the leader returns `PERMIT`.
 
-Mitigation: validators receive the original immutable text and independently verify leader normalization. Direct Mode tests include a malicious-leader case.
+Mitigation: validators independently derive semantics from the original immutable text, then compare stable facts to the leader result. Direct Mode tests include malicious-leader and disagreement cases.
 
 ## Threat: leader hides a real conflict
 
 Example: two rules cannot jointly be satisfied but the leader returns `COMPATIBLE`.
 
-Mitigation: pairwise relation edges have their own independent validator prompt. Validators must confirm that both rules really can be obeyed together.
+Mitigation: pairwise relation edges have their own independent derivation prompt. Validators must independently classify both rules and agree on relation kind and conflict subtype where applicable.
 
 ## Threat: prompt injection in rule text or rulebook purpose
 

@@ -1,13 +1,13 @@
 {
-  "source_commit": "a9555db",
+  "source_commit": "f3b41089de800e62b8d6a633e7fd9301fa44801d",
   "network": "GenLayer StudioNet",
   "cli_version": "0.39.1",
   "deployer": "0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2",
-  "contract_address": "0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA",
-  "deployment_tx": "0xd7ecd14bf1ce45f5c966b376791681e2554ce8102ce490ff17316d960129af40",
+  "contract_address": "0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA",
+  "deployment_tx": "0x05443af49bd3f847b953afefcd9bb1f0e3c4f39d9c29ab95b357b705ff7a7594",
   "status": "FINALIZED",
   "result": "MAJORITY_AGREE",
   "execution_stdout": "",
   "execution_stderr": "",
-  "notes": "Sanitized from the GenLayer CLI deployment output; validator secrets and machine credentials omitted."
+  "notes": "Sanitized from the GenLayer CLI deployment output; validator secrets and machine credentials omitted. Independent RPC status was 0x1; the RPC contractAddress field was null in this GenLayer receipt format."
 }

@@ -6,7 +6,7 @@ Standalone GenLayer Intelligent Contract.
 
 No frontend. No backend. No off-chain database. The Intelligent Contract is the source of truth.
 
-The hardened StudioNet deployment is `0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA`.
+The hardened StudioNet deployment is `0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA`, from source commit `f3b41089de800e62b8d6a633e7fd9301fa44801d`.
 Machine-readable lifecycle proof is recorded under `proof/` and linked from
 `DEPLOYMENT.md`.
 
@@ -20,10 +20,12 @@ It is intended for builders who need a constitution, policy stack, mandate set, 
 
 Concord has two independent non-deterministic consensus boundaries:
 
-1. **Rule normalization**: a leader proposes a bounded semantic representation of one atomic norm. Validators independently verify that the proposal is faithful and materially complete against the immutable source rule.
-2. **Rule relation analysis**: a leader proposes whether two rules are unrelated, compatible, redundant, specializing, conflicting, or ambiguous. Validators independently verify that relation against both source rules and both semantic records.
+1. **Rule normalization**: a leader proposes a bounded semantic representation of one atomic norm. Validators independently derive the rule meaning from the immutable source and compare stable substantive facts, allowing harmless wording variance.
+2. **Rule relation analysis**: a leader proposes whether two rules are unrelated, compatible, redundant, specializing, conflicting, or ambiguous. Validators independently derive the relation from both source rules and semantic records, comparing relation kind and conflict subtype rather than explanatory prose.
 
 Both use `gl.vm.run_nondet_unsafe` with custom validators.
+
+Concord does not rely on validators merely approving a leader-generated classification. Validators independently derive the material semantic result and consensus only commits protocol-relevant equivalent facts, while precedence and lifecycle remain deterministic.
 
 ## What consensus does not do
 
@@ -83,7 +85,7 @@ The repository includes `IConcord` as a typed contract interface.
 
 The repository contains:
 
-- 36 GenLayer Direct Mode tests;
+- 45 GenLayer Direct Mode tests;
 - malicious-leader normalization rejection;
 - malicious relation rejection;
 - prompt-injection behavior tests;

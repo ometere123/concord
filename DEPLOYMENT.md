@@ -8,15 +8,15 @@ recorded here so the deployment can be independently audited.
 
 | Field | Value |
 |---|---|
-| Source commit | `a9555db` (`harden graph restoration and consumer canon views`) |
+| Source commit | `f3b41089de800e62b8d6a633e7fd9301fa44801d` (`preserve validator convergence on conservative ambiguity`) |
 | Network | GenLayer StudioNet |
 | CLI | `genlayer@0.39.1` |
 | Deployer | `0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2` |
-| Deployment transaction | `0xd7ecd14bf1ce45f5c966b376791681e2554ce8102ce490ff17316d960129af40` |
-| Contract address | `0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA` |
+| Deployment transaction | `0x05443af49bd3f847b953afefcd9bb1f0e3c4f39d9c29ab95b357b705ff7a7594` |
+| Contract address | `0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA` |
 | Deployment receipt | `FINALIZED`, `MAJORITY_AGREE`; execution `SUCCESS` |
 
-The deployment schema was verified through the CLI and exposes 17 methods.
+The deployment schema was verified through the CLI and exposes 17 methods. Direct StudioNet RPC independently returned status `0x1` for the deployment transaction; its GenLayer receipt format returned `contractAddress: null`, while the CLI returned the contract address above.
 The previous deployment at `0xf529EDf5291B7fB78f0ba3922b9162A593972020`
 is historical because the contract source changed after that deployment.
 
@@ -83,10 +83,22 @@ Minimum proof should include:
 8. new canon hash;
 9. successful `is_consistent_for` call using that exact hash.
 
-## Verified live lifecycle
+## Current live evidence
+
+The corrected deployment has finalized, successful consensus evidence for rulebook creation, an active first rule, a finalized equal-priority conflict proposal, and deterministic priority resolution. A fresh strict activation attempt was correctly rejected when a model-derived rule remained `AMBIGUOUS`; a separate same-actor conflict attempt finalized `MAJORITY_DISAGREE`. These are recorded as limitations rather than presented as a completed activation lifecycle.
+
+| Operation | Transaction | Observed result |
+|---|---|---|
+| Create proof rulebook 1 | `0xe074e60eaa070b0ac6302305ea500237ddcb4e0ec8da0501a406ee22acd8bd7e` | Finalized; rulebook 1, strict |
+| Propose first rule | `0x9e0dccedaf0d6cefe383fa82991526e0b5fe0e93e550a45232bdc61199f52842` | Finalized; active; canon v1 |
+| Propose equal-priority conflict | `0xea792cfc3973150a318b2fa01bd4e51c52677721012d8b9af860a31ae07a503f` | Finalized; `CONFLICT` / `UNRESOLVED`; rule blocked |
+| Set blocked priority | `0x742cd7d9fdf9cc467da14501be0402ace5527888f2fba99acc123acce4a9a2ab` | Finalized; relation `RIGHT_PREVAILS` |
+| Activation attempt | `0x171d998ddcc799d57a2d33b26792a13260a06f34ddc0a42f8d519a6c4154a612` | Finalized; rejected because rule semantic state remained `AMBIGUOUS` |
+
+## Historical live lifecycle
 
 The following sequential transactions were finalized or observed committed
-against the hardened deployed address above. Rulebook `2` is the clean proof
+against the previous deployment. Rulebook `2` was the clean historical proof
 rulebook; rulebook `1` also contains live exploratory writes but is not used for
 the final proof state.
 

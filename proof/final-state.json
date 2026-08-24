@@ -1,21 +1,21 @@
 {
-  "contract_address": "0x44fB5C44bfB81c2790AC14ab8b4167e25943eCAA",
-  "rulebook_id": 2,
-  "rule_ids": [3, 4],
-  "relation_id": 2,
-  "canon_version": 2,
-  "canon_hash": "db9debd7e8fa063f9c824f6343263b40fedf12fa32dba1d0bda6881626aa9e30",
-  "canon_status": "RESOLVED_CONFLICTS",
+  "contract_address": "0x5C7Fbf4f20690F4bDE5B15e773D6eC47aF0E65FA",
+  "rulebook_id": 1,
+  "rule_ids": [1, 2],
+  "relation_id": 1,
+  "canon_version": 1,
+  "canon_hash": "f744b77967a7007997483624a2564dcf31335483b609e29ecf7f0504a0f8e186",
+  "canon_status": "COHERENT",
   "consistent": true,
-  "has_conflicts": true,
-  "resolved_conflicts": 1,
+  "has_conflicts": false,
+  "resolved_conflicts": 0,
   "unresolved_conflicts": 0,
   "ambiguous_relations": 0,
   "relation": {
     "kind": "CONFLICT",
-    "resolution": "RIGHT_PREVAILS",
-    "left_rule_id": 3,
-    "right_rule_id": 4
+    "resolution": "UNRESOLVED",
+    "left_rule_id": 1,
+    "right_rule_id": 2
   },
   "pin_checks": {
     "exact_hash": true,
